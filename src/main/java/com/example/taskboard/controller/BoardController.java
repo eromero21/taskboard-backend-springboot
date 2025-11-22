@@ -118,4 +118,23 @@ public class BoardController {
 
         return new ResponseEntity<>(successCard, HttpStatus.OK);
     }
+
+    /**
+     * @api {delete} /api/cards/{cardId}/delete Delete existing card
+     * @apiName DeleteCard
+     * @apiGroup Cards
+     *
+     * @apiSuccess (200 OK) {Object} Newly deleted card returned
+     * @apiError (400 Bad Request) Card doesn't exist
+     */
+    @DeleteMapping("/cards/{cardId}/delete")
+    public ResponseEntity<Card> deleteCard(@PathVariable String cardId) {
+        if (!boardService.hasCard(cardId)) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+
+        Card successCard = boardService.deleteCard(cardId);
+
+        return new ResponseEntity<>(successCard, HttpStatus.OK);
+    }
 }

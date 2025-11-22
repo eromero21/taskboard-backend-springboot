@@ -68,4 +68,8 @@ public class BoardService {
         theCard.setDescription(newCard.getDescription());
         return theCard;
     }
+
+    public boolean hasCard(String cardId) {
+        return cards.containsKey(cardId);
+    }
 }

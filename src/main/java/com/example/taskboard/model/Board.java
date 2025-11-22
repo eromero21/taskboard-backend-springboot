@@ -1,11 +1,18 @@
 package com.example.taskboard.model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Board {
     private String id;
     private String name;
     private List<Column> columns;
+
+    public Board() {
+        this.id = "";
+        this.name = "";
+        this.columns = new ArrayList<>();
+    }
 
     public String getId() {
         return id;
