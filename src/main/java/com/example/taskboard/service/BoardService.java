@@ -14,7 +14,7 @@ public class BoardService {
 
     public BoardService() {
         for (int i = 0; i < columnNames.length; i++) {
-            Column newColumn = new Column(columnNames[i], i);
+            Column newColumn = new Column(columnNames[i], ColumnType.values()[i]);
             board.addColumn(newColumn);
         }
 
@@ -34,6 +34,7 @@ public class BoardService {
         String newId = UUID.randomUUID().toString();
         Card newCard = new Card(newId, ColumnType.BACKLOG, title, description);
         cards.put(newId, newCard);
+        board.addCardToColumn(newCard.getColumnId().ordinal(), newCard);
         return newCard;
     }
 
@@ -43,6 +44,7 @@ public class BoardService {
         }
 
         Card theCard = cards.get(cardId);
+        board.moveCard(theCard.getColumnId().ordinal(), columnId.ordinal(), theCard);
         theCard.setColumnId(columnId);
         return new Card();
     }
@@ -54,6 +56,7 @@ public class BoardService {
 
         Card theCard = cards.get(cardId);
         cards.remove(cardId);
+        board.removeCardFromColumn(theCard.getColumnId().ordinal(), theCard);
         return theCard;
     }
 

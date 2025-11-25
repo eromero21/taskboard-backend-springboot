@@ -38,4 +38,12 @@ public class Card {
     public void setDescription(String description) {
         this.description = description;
     }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 }

@@ -37,4 +37,17 @@ public class Board {
     public void addColumn(Column column) {
         columns.add(column);
     }
+
+    public void addCardToColumn(int index, Card card) {
+        this.columns.get(index).addCard(card);
+    }
+
+    public void moveCard(int from, int to, Card card) {
+        this.columns.get(from).removeCard(card);
+        this.columns.get(to).addCard(card);
+    }
+
+    public void removeCardFromColumn(int index, Card card) {
+        this.columns.get(index).removeCard(card);
+    }
 }
