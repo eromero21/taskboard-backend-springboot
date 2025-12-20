@@ -34,7 +34,7 @@ public class BoardService {
         String newId = UUID.randomUUID().toString();
         Card newCard = new Card(newId, ColumnType.BACKLOG, title, description);
         cards.put(newId, newCard);
-        board.addCardToColumn(newCard.getColumnId().ordinal(), newCard);
+        board.addCardToColumn(newCard.getColumnId(), newCard);
         return newCard;
     }
 
@@ -42,9 +42,12 @@ public class BoardService {
         if (!cards.containsKey(cardId)) {
             throw new IllegalArgumentException("Card ID does not exist.");
         }
+        if (!validEnum(columnId)) {
+            throw new IllegalArgumentException("Invalid column type.");
+        }
 
         Card theCard = cards.get(cardId);
-        board.moveCard(theCard.getColumnId().ordinal(), columnId.ordinal(), theCard);
+        board.moveCard(theCard.getColumnId(), columnId, theCard);
         theCard.setColumnId(columnId);
         return new Card();
     }
@@ -56,7 +59,7 @@ public class BoardService {
 
         Card theCard = cards.get(cardId);
         cards.remove(cardId);
-        board.removeCardFromColumn(theCard.getColumnId().ordinal(), theCard);
+        board.removeCardFromColumn(theCard);
         return theCard;
     }
 
@@ -66,7 +69,6 @@ public class BoardService {
         }
 
         Card theCard = cards.get(cardId);
-        theCard.setColumnId(newCard.getColumnId());
         theCard.setTitle(newCard.getTitle());
         theCard.setDescription(newCard.getDescription());
         return theCard;
@@ -74,5 +76,14 @@ public class BoardService {
 
     public boolean hasCard(String cardId) {
         return cards.containsKey(cardId);
+    }
+
+    public boolean validEnum(ColumnType columnType) {
+        try {
+            ColumnType.valueOf(columnType.toString());
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 }

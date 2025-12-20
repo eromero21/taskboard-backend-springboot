@@ -1,17 +1,19 @@
 package com.example.taskboard.model;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Board {
     private String id;
     private String name;
-    private List<Column> columns;
+    private Map<ColumnType, Column> columns;
 
     public Board() {
         this.id = "";
         this.name = "";
-        this.columns = new ArrayList<>();
+        this.columns = new HashMap<>();
     }
 
     public String getId() {
@@ -30,24 +32,24 @@ public class Board {
         this.name = name;
     }
 
-    public List<Column> getColumns() {
+    public Map<ColumnType, Column> getColumns() {
         return columns;
     }
 
     public void addColumn(Column column) {
-        columns.add(column);
+        columns.put(column.getId(), column);
     }
 
-    public void addCardToColumn(int index, Card card) {
-        this.columns.get(index).addCard(card);
+    public void addCardToColumn(ColumnType colId, Card card) {
+        this.columns.get(colId).addCard(card);
     }
 
-    public void moveCard(int from, int to, Card card) {
+    public void moveCard(ColumnType from, ColumnType to, Card card) {
         this.columns.get(from).removeCard(card);
         this.columns.get(to).addCard(card);
     }
 
-    public void removeCardFromColumn(int index, Card card) {
-        this.columns.get(index).removeCard(card);
+    public void removeCardFromColumn(Card card) {
+        this.columns.get(card.getColumnId()).removeCard(card);
     }
 }
