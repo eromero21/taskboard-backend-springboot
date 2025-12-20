@@ -86,14 +86,13 @@ public class BoardController {
      */
     @PatchMapping("/cards/{cardId}/edit")
     public ResponseEntity<Card> editCard(@PathVariable String cardId, @RequestBody Map<String, String> cardInfo) {
-        if (!cardInfo.containsKey("title") || cardInfo.containsKey("description") || cardInfo.containsKey("columnId")) {
+        if (!cardInfo.containsKey("title") || !cardInfo.containsKey("description")) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
 
         Card newCard = new Card();
         newCard.setTitle(cardInfo.get("title"));
         newCard.setDescription(cardInfo.get("description"));
-        newCard.setColumnId(ColumnType.valueOf(cardInfo.get("columnId")));
 
         Card successCard = boardService.editCard(cardId, newCard);
 
