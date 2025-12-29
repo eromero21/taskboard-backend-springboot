@@ -1,10 +1,23 @@
 package com.example.taskboard.model;
 
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "cards")
 public class Card {
+    @Id
     private String id;
     private String title;
+
+    @jakarta.persistence.Column(length = 2000)
     private String description;
+
+    @Enumerated(EnumType.STRING)
     private ColumnType columnId;
+
+    @ManyToOne
+    @JoinColumn(name = "board_id")
+    private Board board;
 
     public Card (String id, ColumnType columnId, String title, String description) {
         this.id = id;
@@ -45,5 +58,13 @@ public class Card {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public Board getBoard() {
+        return board;
+    }
+
+    public void setBoard(Board board) {
+        this.board = board;
     }
 }

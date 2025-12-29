@@ -35,7 +35,11 @@ public class Column {
     }
 
     public void removeCard(Card card) {
-        this.cards.remove(card);
+        if (card == null || card.getId() == null) {
+            return;
+        }
+
+        this.cards.removeIf(c -> c.getId().equals(card.getId()));
     }
 
     public List<Card> getCards() {

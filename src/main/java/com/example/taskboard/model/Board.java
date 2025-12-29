@@ -1,26 +1,35 @@
 package com.example.taskboard.model;
 
+import jakarta.persistence.*;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Entity
+@Table(name = "boards")
 public class Board {
-    private String id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     private String name;
+
+    @Transient
     private Map<ColumnType, Column> columns;
 
     public Board() {
-        this.id = "";
-        this.name = "";
-        this.columns = new HashMap<>();
     }
 
-    public String getId() {
+    public Board(String name) {
+        this.name = name;
+    }
+
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -32,8 +41,16 @@ public class Board {
         this.name = name;
     }
 
+    public void setColumns(Map<ColumnType, Column> columns) {
+        this.columns = columns;
+    }
+
     public Map<ColumnType, Column> getColumns() {
         return columns;
+    }
+
+    public Column getColumnById(ColumnType columnId) {
+        return columns.get(columnId);
     }
 
     public void addColumn(Column column) {

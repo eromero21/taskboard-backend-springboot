@@ -3,56 +3,81 @@ package com.example.taskboard.controller;
 import com.example.taskboard.model.Board;
 import com.example.taskboard.model.Card;
 import com.example.taskboard.model.ColumnType;
+import com.example.taskboard.repository.BoardRepository;
 import com.example.taskboard.service.BoardService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api")
 @CrossOrigin(origins = "http://localhost:5173")
 public class BoardController {
-    BoardService boardService = new BoardService();
+    private final BoardService boardService;
+    private final BoardRepository boardRepository;
 
-    /**
-     * @api {get} /api/board Get the board (currently only 1)
-     * @apiName GetBoard
-     * @apiGroup Boards
-     *
-     * @apiSuccess (200 OK) {Object} Single board return
-     * @apiError (404 Not Found) No board to return
-     */
+    public BoardController(BoardService boardService, BoardRepository boardRepository) {
+        this.boardService = boardService;
+        this.boardRepository = boardRepository;
+    }
+
     @GetMapping("/board")
-    public ResponseEntity<Board> getBoard() {
-        Board board = boardService.getBoard();
-
-        if (board == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
-        return new ResponseEntity<>(board, HttpStatus.OK);
+    public Board defaultBoard() {
+        Long defaultBoardId = 1L;
+        return boardService.getBoard(defaultBoardId);
     }
 
     /**
-     * @api {get} /api/cards Get list of current cards
-     * @apiName GetCards
-     * @apiGroup Cards
+     * @api {get} /api/boards Get the list of boards
+     * @apiName GetBoards
+     * @apiGroup Boards
      *
-     * @apiSuccess (200 OK) {Object[]} List of cards returned
-     * @apiError (204 No Content) No cards available
+     * @apiSuccess (200 OK) {Object} List of boards returned
      */
-    @GetMapping("/cards")
-    public ResponseEntity<List<Card>> getCards() {
-        List<Card> cards = boardService.getCards();
+    @GetMapping("/boards")
+    public ResponseEntity<List<Board>> getBoards() {
+        List<Board> boards = boardRepository.findAll();
+        return ResponseEntity.ok(boards);
+    }
 
-        if (cards == null) {
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        }
+    /**
+     * @api {post} /api/boards Create a new board
+     * @apiName CreateBoard
+     * @apiGroup Boards
+     *
+     * @apiSuccess (201 CREATED) {Object} New Board returned
+     */
+    @PostMapping("/boards")
+    public ResponseEntity<Board> createBoard(@RequestBody CreateBoardRequest req) {
+        Board saved = boardRepository.save(new Board(req.name));
 
-        return new ResponseEntity<>(cards, HttpStatus.OK);
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(saved.getId())
+                .toUri();
+
+        return ResponseEntity.created(location).body(saved);
+    }
+
+    /**
+     * @api {get} /api/boards/{boardId} Get board by id
+     * @apiName GetBoardById
+     * @apiGroup Boards
+     *
+     * @apiSuccess (200 OK) {Object} Appropriate board returned
+     */
+    @GetMapping("/boards/{boardId}")
+    public ResponseEntity<Board> getBoardById(@PathVariable Long boardId) {
+        Optional<Board> board = boardRepository.findById(boardId);
+
+        return board.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     /**
@@ -63,17 +88,20 @@ public class BoardController {
      * @apiSuccess (201 Created) {Object} Newly created card returned
      * @apiError (400 Bad Request) Insufficient information
      */
-    @PostMapping("/cards")
-    public ResponseEntity<Card> createCard(@RequestBody Map<String, String> cardInfo) {
-        String newTitle = cardInfo.get("title");
-        String newDescription = cardInfo.get("description");
-
-        if (newTitle == null || newDescription == null) {
+    @PostMapping("/boards/{boardId}/cards")
+    public ResponseEntity<Card> createCard(@PathVariable Long boardId, @RequestBody CreateCardRequest req) {
+        if (req.title == null) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
 
-        Card newCard = boardService.createCard(newTitle, newDescription);
-        return new ResponseEntity<>(newCard, HttpStatus.CREATED);
+        Card newCard = boardService.createCard(boardId, req.title, req.description);
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(newCard.getId())
+                .toUri();
+
+        return ResponseEntity.created(location).body(newCard);
     }
 
     /**
@@ -84,8 +112,10 @@ public class BoardController {
      * @apiSuccess (200 OK) {Object} Newly edited card returned
      * @apiError (400 Bad Request) Insufficient information
      */
-    @PatchMapping("/cards/{cardId}/edit")
-    public ResponseEntity<Card> editCard(@PathVariable String cardId, @RequestBody Map<String, String> cardInfo) {
+    @PatchMapping("boards/{boardId}/cards/{cardId}/edit")
+    public ResponseEntity<Card> editCard(@PathVariable Long boardId,
+                                         @PathVariable String cardId,
+                                         @RequestBody Map<String, String> cardInfo) {
         if (!cardInfo.containsKey("title") || !cardInfo.containsKey("description")) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
@@ -96,7 +126,7 @@ public class BoardController {
 
         Card successCard = boardService.editCard(cardId, newCard);
 
-        return new ResponseEntity<>(successCard, HttpStatus.OK);
+        return ResponseEntity.ok(successCard);
     }
 
     /**
@@ -107,13 +137,12 @@ public class BoardController {
      * @apiSuccess (200 OK) {Object} Newly moved card returned
      * @apiError (400 Bad Request) Insufficient information
      */
-    @PatchMapping("/cards/{cardId}/move")
-     public ResponseEntity<Card> moveCard(@PathVariable String cardId, @RequestBody Map<String, String> cardInfo) {
-        if (!cardInfo.containsKey("columnId")) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
+    @PatchMapping("/boards/{boardId}/cards/{cardId}/move")
+     public ResponseEntity<Card> moveCard(@PathVariable Long boardId,
+                                          @PathVariable String cardId,
+                                          @RequestParam ColumnType colType) {
 
-        Card successCard = boardService.moveCard(cardId, ColumnType.valueOf(cardInfo.get("columnId")));
+        Card successCard = boardService.moveCard(boardId, cardId, colType);
 
         return new ResponseEntity<>(successCard, HttpStatus.OK);
     }
@@ -136,4 +165,7 @@ public class BoardController {
 
         return new ResponseEntity<>(successCard, HttpStatus.OK);
     }
+
+    public record CreateBoardRequest(String name) {}
+    public record CreateCardRequest(String title, String description) {}
 }
