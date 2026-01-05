@@ -55,7 +55,7 @@ public class BoardController {
      */
     @PostMapping("/boards")
     public ResponseEntity<Board> createBoard(@RequestBody CreateBoardRequest req) {
-        Board saved = boardRepository.save(new Board(req.name));
+        Board saved = boardRepository.save(new Board(req.name()));
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
@@ -75,9 +75,13 @@ public class BoardController {
      */
     @GetMapping("/boards/{boardId}")
     public ResponseEntity<Board> getBoardById(@PathVariable Long boardId) {
-        Optional<Board> board = boardRepository.findById(boardId);
+        Board retBoard = boardService.getBoard(boardId);
 
-        return board.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        if (retBoard != null) {
+            return ResponseEntity.ok(retBoard);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     /**
@@ -94,7 +98,7 @@ public class BoardController {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
 
-        Card newCard = boardService.createCard(boardId, req.title, req.description);
+        Card newCard = boardService.createCard(boardId, req.title(), req.description());
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")
@@ -140,9 +144,9 @@ public class BoardController {
     @PatchMapping("/boards/{boardId}/cards/{cardId}/move")
      public ResponseEntity<Card> moveCard(@PathVariable Long boardId,
                                           @PathVariable String cardId,
-                                          @RequestParam ColumnType colType) {
+                                          @RequestBody MoveCardRequest req) {
 
-        Card successCard = boardService.moveCard(boardId, cardId, colType);
+        Card successCard = boardService.moveCard(boardId, cardId, req.columnId());
 
         return new ResponseEntity<>(successCard, HttpStatus.OK);
     }
@@ -168,4 +172,5 @@ public class BoardController {
 
     public record CreateBoardRequest(String name) {}
     public record CreateCardRequest(String title, String description) {}
+    public record MoveCardRequest(ColumnType columnId) {}
 }

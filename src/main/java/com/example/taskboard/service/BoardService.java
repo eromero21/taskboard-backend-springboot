@@ -67,7 +67,7 @@ public class BoardService {
         Card theCard = cardRepository.findById(cardId).orElseThrow(() ->
                 new IllegalArgumentException("Card ID doesn't exist.."));
 
-        if (theCard.getBoard().getId().equals(boardId)) {
+        if (!theCard.getBoard().getId().equals(boardId)) {
             throw new IllegalArgumentException("Card does not belong to this board.");
         }
 

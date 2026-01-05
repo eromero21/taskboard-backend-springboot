@@ -1,5 +1,6 @@
 package com.example.taskboard.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -17,6 +18,7 @@ public class Card {
 
     @ManyToOne
     @JoinColumn(name = "board_id")
+    @JsonIgnore
     private Board board;
 
     public Card (String id, ColumnType columnId, String title, String description) {
