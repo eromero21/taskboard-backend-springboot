@@ -2,6 +2,7 @@ package com.example.taskboard;
 
 import com.example.taskboard.model.Board;
 import com.example.taskboard.repository.BoardRepository;
+import com.example.taskboard.service.BoardService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -15,11 +16,10 @@ public class TaskboardApplication {
 	}
 
 	@Bean
-	CommandLineRunner seedDefaultBoard(BoardRepository boardRepo) {
+	CommandLineRunner seedDefaultBoard(BoardService boardService, BoardRepository boardRepository) {
 		return args -> {
-			if (boardRepo.count() == 0) {
-				Board defaultBoard = new Board("My First Board");
-				boardRepo.save(defaultBoard);
+			if (boardRepository.count() == 0) {
+				boardService.createBoard("My first board!");
 			}
 		};
 	}

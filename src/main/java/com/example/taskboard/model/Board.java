@@ -3,9 +3,9 @@ package com.example.taskboard.model;
 import jakarta.persistence.*;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 @Entity
 @Table(name = "boards")
@@ -15,11 +15,10 @@ public class Board {
     private Long id;
     private String name;
 
-    @Transient
-    private Map<ColumnType, Column> columns;
+    @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private Set<ColumnEntity> columns = new LinkedHashSet<>();
 
-    public Board() {
-    }
+    public Board() {}
 
     public Board(String name) {
         this.name = name;
@@ -41,32 +40,48 @@ public class Board {
         this.name = name;
     }
 
-    public void setColumns(Map<ColumnType, Column> columns) {
+    public void setColumns(Set<ColumnEntity> columns) {
         this.columns = columns;
     }
 
-    public Map<ColumnType, Column> getColumns() {
+    public Set<ColumnEntity> getColumns() {
         return columns;
     }
 
-    public Column getColumnById(ColumnType columnId) {
-        return columns.get(columnId);
+    public ColumnEntity getColumnById(ColumnType columnId) {
+        for (ColumnEntity column : columns) {
+            if (column.getType().equals(columnId)) {
+                return column;
+            }
+        }
+        return null;
     }
 
-    public void addColumn(Column column) {
-        columns.put(column.getId(), column);
+    public void addColumn(ColumnEntity column) {
+        if (column == null) {return;}
+        columns.add(column);
+        column.setBoard(this);
     }
 
     public void addCardToColumn(ColumnType colId, Card card) {
-        this.columns.get(colId).addCard(card);
+        ColumnEntity column = getColumnById(colId);
+        if (column == null) {
+            return;
+        }
+        column.addCard(card);
     }
 
     public void moveCard(ColumnType from, ColumnType to, Card card) {
-        this.columns.get(from).removeCard(card);
-        this.columns.get(to).addCard(card);
+        removeCardFromColumn(from, card);
+        addCardToColumn(to, card);
     }
 
-    public void removeCardFromColumn(Card card) {
-        this.columns.get(card.getColumnId()).removeCard(card);
+    public void removeCardFromColumn(ColumnType colId, Card card) {
+        ColumnEntity column = getColumnById(colId);
+        if (column == null) {
+            return;
+        }
+        column.removeCard(card);
     }
+
 }

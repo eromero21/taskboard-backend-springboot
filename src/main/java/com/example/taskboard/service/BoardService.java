@@ -1,13 +1,15 @@
 package com.example.taskboard.service;
 
 import com.example.taskboard.model.Board;
-import com.example.taskboard.model.Column;
+import com.example.taskboard.model.ColumnEntity;
 import com.example.taskboard.model.Card;
 import com.example.taskboard.model.ColumnType;
 import com.example.taskboard.repository.BoardRepository;
 import com.example.taskboard.repository.CardRepository;
-import jakarta.annotation.PostConstruct;
+import com.example.taskboard.repository.ColumnRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 
@@ -16,31 +18,34 @@ public class BoardService {
     private final String[] columnNames = {"Backlog", "Todo", "In Progress", "Completed"};
     private final CardRepository cardRepository;
     private final BoardRepository boardRepository;
+    private final ColumnRepository columnRepository;
 
-    public BoardService(CardRepository cardRepository, BoardRepository boardRepository) {
+    public BoardService(CardRepository cardRepository, BoardRepository boardRepository, ColumnRepository columnRepository) {
         this.cardRepository = cardRepository;
         this.boardRepository = boardRepository;
+        this.columnRepository = columnRepository;
+    }
+
+    public Board createBoard(String name) {
+        Board board = new Board();
+        board.setName(name);
+
+        for (String columnName : columnNames) {
+            ColumnType type = ColumnType.valueOf(columnName.toUpperCase().replace(" ", "_"));
+            ColumnEntity column = new ColumnEntity(columnName, type);
+            board.addColumn(column);
+        }
+
+        return boardRepository.save(board);
     }
 
     public Board getBoard(Long boardId) {
-        Board board = boardRepository.findById(boardId).orElseThrow(() ->
+        return boardRepository.findByIdWithColumnsAndCards(boardId).orElseThrow(() ->
                 new IllegalArgumentException("Board not found"));
+    }
 
-        Map<ColumnType, Column> columns = new LinkedHashMap<>();
-        for (int i = 0; i < columnNames.length; i++) {
-            ColumnType type = ColumnType.values()[i];
-            Column col = new Column(columnNames[i], type);
-            columns.put(type, col);
-        }
-
-        List<Card> cards = cardRepository.findByBoardId(boardId);
-        for (Card card : cards) {
-            columns.get(card.getColumnId()).addCard(card);
-        }
-
-        board.setColumns(columns);
-
-        return board;
+    public List<Board> getAllBoards() {
+        return boardRepository.findAll();
     }
 
     public List<Card> getCards() {
@@ -51,16 +56,22 @@ public class BoardService {
         Board board = boardRepository.findById(boardId).orElseThrow(() ->
                 new IllegalArgumentException("Board not found"));
 
-        String newId = UUID.randomUUID().toString();
-        Card newCard = new Card(newId, ColumnType.BACKLOG, title, description);
-        newCard.setBoard(board);
-        Card savedCard = cardRepository.save(newCard);
-        board.addCardToColumn(newCard.getColumnId(), savedCard);
-        return savedCard;
+        ColumnEntity backlog = columnRepository.findByBoardIdAndType(boardId, ColumnType.BACKLOG).orElseThrow(
+                () -> new IllegalArgumentException("Column not found"));
+
+        if (backlog == null) {
+            throw new IllegalArgumentException("Backlog column does not exist for this board.");
+        }
+
+        Card newCard = new Card(board, backlog, title, description);
+
+        backlog.getCards().add(newCard);
+
+        return cardRepository.save(newCard);
     }
 
-    public Card moveCard(Long boardId, String cardId, ColumnType columnId) {
-        if (!validEnum(columnId)) {
+    public Card moveCard(Long boardId, Long cardId, ColumnType columnId) {
+        if (columnId == null) {
             throw new IllegalArgumentException("Invalid column type.");
         }
 
@@ -71,23 +82,32 @@ public class BoardService {
             throw new IllegalArgumentException("Card does not belong to this board.");
         }
 
-        theCard.setColumnId(columnId);
+        ColumnEntity targetColumn = columnRepository.findByBoardIdAndType(boardId, columnId).orElseThrow(
+                () -> new IllegalArgumentException("Column not belong to this board.")
+        );
 
+        theCard.setColumn(targetColumn);
         return cardRepository.save(theCard);
     }
 
-    public Card deleteCard(String cardId) {
+    public void deleteCard(Long boardId, Long cardId) {
         Card theCard = cardRepository.findById(cardId).orElseThrow(() ->
-                new IllegalArgumentException("Card ID doesn't exist.."));
+                new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        cardRepository.deleteById(cardId);
+        if (!theCard.getBoard().getId().equals(boardId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
 
-        return theCard;
+        cardRepository.delete(theCard);
     }
 
-    public Card editCard(String cardId, Card newCard) {
+    public Card editCard(Long boardId, Long cardId, Card newCard) {
         Card theCard = cardRepository.findById(cardId).orElseThrow(() ->
                 new IllegalArgumentException("Card ID doesn't exist.."));
+
+        if (!theCard.getBoard().getId().equals(boardId)) {
+            throw new IllegalArgumentException("Card does not belong to this board.");
+        }
 
         theCard.setTitle(newCard.getTitle());
         theCard.setDescription(newCard.getDescription());
@@ -95,16 +115,7 @@ public class BoardService {
         return cardRepository.save(theCard);
     }
 
-    public boolean hasCard(String cardId) {
+    public boolean hasCard(Long cardId) {
         return cardRepository.existsById(cardId);
-    }
-
-    public boolean validEnum(ColumnType columnType) {
-        try {
-            ColumnType.valueOf(columnType.toString());
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
     }
 }

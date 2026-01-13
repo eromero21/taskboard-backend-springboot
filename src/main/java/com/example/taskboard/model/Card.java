@@ -7,23 +7,27 @@ import jakarta.persistence.*;
 @Table(name = "cards")
 public class Card {
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     private String title;
 
     @jakarta.persistence.Column(length = 2000)
     private String description;
-
-    @Enumerated(EnumType.STRING)
-    private ColumnType columnId;
 
     @ManyToOne
     @JoinColumn(name = "board_id")
     @JsonIgnore
     private Board board;
 
-    public Card (String id, ColumnType columnId, String title, String description) {
-        this.id = id;
-        this.columnId = columnId;
+    @ManyToOne
+    @JoinColumn(name = "column_id")
+    @JsonIgnore
+    private ColumnEntity column;
+
+    public Card (Board board, ColumnEntity column, String title, String description) {
+        this.board = board;
+        this.column = column;
         this.title = title;
         this.description = description;
     }
@@ -31,11 +35,18 @@ public class Card {
     public Card() {};
 
     public ColumnType getColumnId() {
-        return columnId;
+        if (column != null) {
+            return this.column.getType();
+        }
+        return null;
     }
 
-    public void setColumnId(ColumnType columnId) {
-        this.columnId = columnId;
+    public ColumnEntity getColumn() {
+        return this.column;
+    }
+
+    public void setColumn(ColumnEntity column) {
+        this.column = column;
     }
 
     public String getTitle() {
@@ -54,12 +65,8 @@ public class Card {
         this.description = description;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
     }
 
     public Board getBoard() {

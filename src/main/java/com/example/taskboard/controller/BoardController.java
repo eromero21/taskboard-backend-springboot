@@ -20,17 +20,9 @@ import java.util.Optional;
 @CrossOrigin(origins = "http://localhost:5173")
 public class BoardController {
     private final BoardService boardService;
-    private final BoardRepository boardRepository;
 
-    public BoardController(BoardService boardService, BoardRepository boardRepository) {
+    public BoardController(BoardService boardService) {
         this.boardService = boardService;
-        this.boardRepository = boardRepository;
-    }
-
-    @GetMapping("/board")
-    public Board defaultBoard() {
-        Long defaultBoardId = 1L;
-        return boardService.getBoard(defaultBoardId);
     }
 
     /**
@@ -41,9 +33,11 @@ public class BoardController {
      * @apiSuccess (200 OK) {Object} List of boards returned
      */
     @GetMapping("/boards")
-    public ResponseEntity<List<Board>> getBoards() {
-        List<Board> boards = boardRepository.findAll();
-        return ResponseEntity.ok(boards);
+    public ResponseEntity<List<BoardIdSummary>> getBoards() {
+        return ResponseEntity.ok(
+                boardService.getAllBoards().stream()
+                        .map(b -> new BoardIdSummary(b.getId(), b.getName()))
+                        .toList());
     }
 
     /**
@@ -55,7 +49,7 @@ public class BoardController {
      */
     @PostMapping("/boards")
     public ResponseEntity<Board> createBoard(@RequestBody CreateBoardRequest req) {
-        Board saved = boardRepository.save(new Board(req.name()));
+        Board saved = boardService.createBoard(req.name());
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
@@ -75,17 +69,11 @@ public class BoardController {
      */
     @GetMapping("/boards/{boardId}")
     public ResponseEntity<Board> getBoardById(@PathVariable Long boardId) {
-        Board retBoard = boardService.getBoard(boardId);
-
-        if (retBoard != null) {
-            return ResponseEntity.ok(retBoard);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        return ResponseEntity.ok(boardService.getBoard(boardId));
     }
 
     /**
-     * @api {post} /api/cards Create new card
+     * @api {post} /api/boards/{boardId}/cards Create new card
      * @apiName CreateCard
      * @apiGroup Cards
      *
@@ -94,7 +82,7 @@ public class BoardController {
      */
     @PostMapping("/boards/{boardId}/cards")
     public ResponseEntity<Card> createCard(@PathVariable Long boardId, @RequestBody CreateCardRequest req) {
-        if (req.title == null) {
+        if (req.title() == null || req.title().isBlank()) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
 
@@ -109,16 +97,16 @@ public class BoardController {
     }
 
     /**
-     * @api {patch} /api/cards/{cardId}/edit Change existing card
+     * @api {patch} /api/boards/{boardId}/cards/{cardId}/edit Change existing card
      * @apiName EditCard
      * @apiGroup Cards
      *
      * @apiSuccess (200 OK) {Object} Newly edited card returned
      * @apiError (400 Bad Request) Insufficient information
      */
-    @PatchMapping("boards/{boardId}/cards/{cardId}/edit")
+    @PatchMapping("/boards/{boardId}/cards/{cardId}/edit")
     public ResponseEntity<Card> editCard(@PathVariable Long boardId,
-                                         @PathVariable String cardId,
+                                         @PathVariable Long cardId,
                                          @RequestBody Map<String, String> cardInfo) {
         if (!cardInfo.containsKey("title") || !cardInfo.containsKey("description")) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
@@ -128,13 +116,13 @@ public class BoardController {
         newCard.setTitle(cardInfo.get("title"));
         newCard.setDescription(cardInfo.get("description"));
 
-        Card successCard = boardService.editCard(cardId, newCard);
+        Card successCard = boardService.editCard(boardId, cardId, newCard);
 
         return ResponseEntity.ok(successCard);
     }
 
     /**
-     * @api {patch} /api/cards/{cardId}/move Change column on existing card
+     * @api {patch} /api/boards/{boardId}/cards/{cardId}/move Change column on existing card
      * @apiName MoveCard
      * @apiGroup Cards
      *
@@ -143,8 +131,11 @@ public class BoardController {
      */
     @PatchMapping("/boards/{boardId}/cards/{cardId}/move")
      public ResponseEntity<Card> moveCard(@PathVariable Long boardId,
-                                          @PathVariable String cardId,
+                                          @PathVariable Long cardId,
                                           @RequestBody MoveCardRequest req) {
+        if (req == null || req.columnId() == null) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
 
         Card successCard = boardService.moveCard(boardId, cardId, req.columnId());
 
@@ -152,25 +143,22 @@ public class BoardController {
     }
 
     /**
-     * @api {delete} /api/cards/{cardId}/delete Delete existing card
+     * @api {delete} /api/boards/{boardId}/cards/{cardId}/delete Delete existing card
      * @apiName DeleteCard
      * @apiGroup Cards
      *
      * @apiSuccess (200 OK) {Object} Newly deleted card returned
      * @apiError (400 Bad Request) Card doesn't exist
      */
-    @DeleteMapping("/cards/{cardId}/delete")
-    public ResponseEntity<Card> deleteCard(@PathVariable String cardId) {
-        if (!boardService.hasCard(cardId)) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
+    @DeleteMapping("/boards/{boardId}/cards/{cardId}/delete")
+    public ResponseEntity<Void> deleteCard(@PathVariable Long boardId, @PathVariable Long cardId) {
+        boardService.deleteCard(boardId, cardId);
 
-        Card successCard = boardService.deleteCard(cardId);
-
-        return new ResponseEntity<>(successCard, HttpStatus.OK);
+        return ResponseEntity.noContent().build();
     }
 
     public record CreateBoardRequest(String name) {}
     public record CreateCardRequest(String title, String description) {}
     public record MoveCardRequest(ColumnType columnId) {}
+    public record BoardIdSummary(Long id, String name) {}
 }
