@@ -82,11 +82,8 @@ public class BoardController {
      */
     @PostMapping("/boards/{boardId}/cards")
     public ResponseEntity<Card> createCard(@PathVariable Long boardId, @RequestBody CreateCardRequest req) {
-        if (req.title() == null || req.title().isBlank()) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
-
         Card newCard = boardService.createCard(boardId, req.title(), req.description());
+
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")
@@ -133,9 +130,6 @@ public class BoardController {
      public ResponseEntity<Card> moveCard(@PathVariable Long boardId,
                                           @PathVariable Long cardId,
                                           @RequestBody MoveCardRequest req) {
-        if (req == null || req.columnId() == null) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
 
         Card successCard = boardService.moveCard(boardId, cardId, req.columnId());
 

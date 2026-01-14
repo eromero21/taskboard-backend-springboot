@@ -8,6 +8,7 @@ import com.example.taskboard.repository.BoardRepository;
 import com.example.taskboard.repository.CardRepository;
 import com.example.taskboard.repository.ColumnRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -53,15 +54,15 @@ public class BoardService {
     }
 
     public Card createCard(Long boardId, String title, String description) {
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("Title cannot be empty");
+        }
+
         Board board = boardRepository.findById(boardId).orElseThrow(() ->
                 new IllegalArgumentException("Board not found"));
 
         ColumnEntity backlog = columnRepository.findByBoardIdAndType(boardId, ColumnType.BACKLOG).orElseThrow(
-                () -> new IllegalArgumentException("Column not found"));
-
-        if (backlog == null) {
-            throw new IllegalArgumentException("Backlog column does not exist for this board.");
-        }
+                () -> new IllegalArgumentException("Backlog column not found"));
 
         Card newCard = new Card(board, backlog, title, description);
 
