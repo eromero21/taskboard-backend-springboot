@@ -1,5 +1,6 @@
 package com.example.taskboard.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 
@@ -14,6 +15,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @JsonIgnore
     @Column(nullable = false)
     private String passwordHash;
 
@@ -23,6 +25,8 @@ public class User {
         this.email = email;
         this.passwordHash = passwordHash;
     }
+
+    public Long getId() { return id; }
 
     public String getEmail() {
         return email;

@@ -67,7 +67,7 @@ public class UserServiceTest {
             userService.getUserByEmail(email);
         });
 
-        assertEquals("User not found.", exception.getMessage());
+        assertEquals("User not found with given email.", exception.getMessage());
         verify(userRepository).findByEmail(email);
     }
 }

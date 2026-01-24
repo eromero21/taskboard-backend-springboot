@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/boards")
 @CrossOrigin(origins = "http://localhost:5173")
 public class BoardController {
     private final BoardService boardService;
@@ -26,13 +26,13 @@ public class BoardController {
     }
 
     /**
-     * @api {get} /api/boards Get the list of boards
+     * @api {get} /boards Get the list of boards
      * @apiName GetBoards
      * @apiGroup Boards
      *
      * @apiSuccess (200 OK) {Object} List of boards returned
      */
-    @GetMapping("/boards")
+    @GetMapping
     public ResponseEntity<List<BoardIdSummary>> getBoards() {
         return ResponseEntity.ok(
                 boardService.getAllBoards().stream()
@@ -41,13 +41,13 @@ public class BoardController {
     }
 
     /**
-     * @api {post} /api/boards Create a new board
+     * @api {post} /boards Create a new board
      * @apiName CreateBoard
      * @apiGroup Boards
      *
      * @apiSuccess (201 CREATED) {Object} New Board returned
      */
-    @PostMapping("/boards")
+    @PostMapping
     public ResponseEntity<Board> createBoard(@RequestBody CreateBoardRequest req) {
         Board saved = boardService.createBoard(req.name());
 
@@ -61,26 +61,26 @@ public class BoardController {
     }
 
     /**
-     * @api {get} /api/boards/{boardId} Get board by id
+     * @api {get} /boards/{boardId} Get board by id
      * @apiName GetBoardById
      * @apiGroup Boards
      *
      * @apiSuccess (200 OK) {Object} Appropriate board returned
      */
-    @GetMapping("/boards/{boardId}")
+    @GetMapping("/{boardId}")
     public ResponseEntity<Board> getBoardById(@PathVariable Long boardId) {
         return ResponseEntity.ok(boardService.getBoard(boardId));
     }
 
     /**
-     * @api {post} /api/boards/{boardId}/cards Create new card
+     * @api {post} /boards/{boardId}/cards Create new card
      * @apiName CreateCard
      * @apiGroup Cards
      *
      * @apiSuccess (201 Created) {Object} Newly created card returned
      * @apiError (400 Bad Request) Insufficient information
      */
-    @PostMapping("/boards/{boardId}/cards")
+    @PostMapping("/{boardId}/cards")
     public ResponseEntity<Card> createCard(@PathVariable Long boardId, @RequestBody CreateCardRequest req) {
         Card newCard = boardService.createCard(boardId, req.title(), req.description());
 
@@ -94,14 +94,14 @@ public class BoardController {
     }
 
     /**
-     * @api {patch} /api/boards/{boardId}/cards/{cardId}/edit Change existing card
+     * @api {patch} /boards/{boardId}/cards/{cardId}/edit Change existing card
      * @apiName EditCard
      * @apiGroup Cards
      *
      * @apiSuccess (200 OK) {Object} Newly edited card returned
      * @apiError (400 Bad Request) Insufficient information
      */
-    @PatchMapping("/boards/{boardId}/cards/{cardId}/edit")
+    @PatchMapping("/{boardId}/cards/{cardId}/edit")
     public ResponseEntity<Card> editCard(@PathVariable Long boardId,
                                          @PathVariable Long cardId,
                                          @RequestBody Map<String, String> cardInfo) {
@@ -119,14 +119,14 @@ public class BoardController {
     }
 
     /**
-     * @api {patch} /api/boards/{boardId}/cards/{cardId}/move Change column on existing card
+     * @api {patch} /boards/{boardId}/cards/{cardId}/move Change column on existing card
      * @apiName MoveCard
      * @apiGroup Cards
      *
      * @apiSuccess (200 OK) {Object} Newly moved card returned
      * @apiError (400 Bad Request) Insufficient information
      */
-    @PatchMapping("/boards/{boardId}/cards/{cardId}/move")
+    @PatchMapping("/{boardId}/cards/{cardId}/move")
      public ResponseEntity<Card> moveCard(@PathVariable Long boardId,
                                           @PathVariable Long cardId,
                                           @RequestBody MoveCardRequest req) {
@@ -137,14 +137,14 @@ public class BoardController {
     }
 
     /**
-     * @api {delete} /api/boards/{boardId}/cards/{cardId}/delete Delete existing card
+     * @api {delete} /boards/{boardId}/cards/{cardId}/delete Delete existing card
      * @apiName DeleteCard
      * @apiGroup Cards
      *
      * @apiSuccess (200 OK) {Object} Newly deleted card returned
      * @apiError (400 Bad Request) Card doesn't exist
      */
-    @DeleteMapping("/boards/{boardId}/cards/{cardId}/delete")
+    @DeleteMapping("/{boardId}/cards/{cardId}/delete")
     public ResponseEntity<Void> deleteCard(@PathVariable Long boardId, @PathVariable Long cardId) {
         boardService.deleteCard(boardId, cardId);
 
