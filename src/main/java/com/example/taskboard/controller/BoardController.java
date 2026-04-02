@@ -3,17 +3,17 @@ package com.example.taskboard.controller;
 import com.example.taskboard.model.Board;
 import com.example.taskboard.model.Card;
 import com.example.taskboard.model.ColumnType;
-import com.example.taskboard.repository.BoardRepository;
+import com.example.taskboard.model.User;
 import com.example.taskboard.service.BoardService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/boards")
@@ -33,9 +33,11 @@ public class BoardController {
      * @apiSuccess (200 OK) {Object} List of boards returned
      */
     @GetMapping
-    public ResponseEntity<List<BoardIdSummary>> getBoards() {
+    public ResponseEntity<List<BoardIdSummary>> getBoards(Authentication authentication) {
+        User user = requireUser(authentication);
+
         return ResponseEntity.ok(
-                boardService.getAllBoards().stream()
+                boardService.getAllBoards(user.getId()).stream()
                         .map(b -> new BoardIdSummary(b.getId(), b.getName()))
                         .toList());
     }
@@ -48,8 +50,9 @@ public class BoardController {
      * @apiSuccess (201 CREATED) {Object} New Board returned
      */
     @PostMapping
-    public ResponseEntity<Board> createBoard(@RequestBody CreateBoardRequest req) {
-        Board saved = boardService.createBoard(req.name());
+    public ResponseEntity<Board> createBoard(Authentication authentication, @RequestBody CreateBoardRequest req) {
+        User user = requireUser(authentication);
+        Board saved = boardService.createBoard(user.getId(), req.name());
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
@@ -68,8 +71,9 @@ public class BoardController {
      * @apiSuccess (200 OK) {Object} Appropriate board returned
      */
     @GetMapping("/{boardId}")
-    public ResponseEntity<Board> getBoardById(@PathVariable Long boardId) {
-        return ResponseEntity.ok(boardService.getBoard(boardId));
+    public ResponseEntity<Board> getBoardById(Authentication authentication, @PathVariable Long boardId) {
+        User user = requireUser(authentication);
+        return ResponseEntity.ok(boardService.getBoard(user.getId(), boardId));
     }
 
     /**
@@ -81,8 +85,11 @@ public class BoardController {
      * @apiError (400 Bad Request) Insufficient information
      */
     @PostMapping("/{boardId}/cards")
-    public ResponseEntity<Card> createCard(@PathVariable Long boardId, @RequestBody CreateCardRequest req) {
-        Card newCard = boardService.createCard(boardId, req.title(), req.description());
+    public ResponseEntity<Card> createCard(Authentication authentication,
+                                           @PathVariable Long boardId,
+                                           @RequestBody CreateCardRequest req) {
+        User user = requireUser(authentication);
+        Card newCard = boardService.createCard(user.getId(), boardId, req.title(), req.description());
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
@@ -104,7 +111,9 @@ public class BoardController {
     @PatchMapping("/{boardId}/cards/{cardId}/edit")
     public ResponseEntity<Card> editCard(@PathVariable Long boardId,
                                          @PathVariable Long cardId,
+                                         Authentication authentication,
                                          @RequestBody Map<String, String> cardInfo) {
+        User user = requireUser(authentication);
         if (!cardInfo.containsKey("title") || !cardInfo.containsKey("description")) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
@@ -113,7 +122,7 @@ public class BoardController {
         newCard.setTitle(cardInfo.get("title"));
         newCard.setDescription(cardInfo.get("description"));
 
-        Card successCard = boardService.editCard(boardId, cardId, newCard);
+        Card successCard = boardService.editCard(user.getId(), boardId, cardId, newCard);
 
         return ResponseEntity.ok(successCard);
     }
@@ -127,11 +136,13 @@ public class BoardController {
      * @apiError (400 Bad Request) Insufficient information
      */
     @PatchMapping("/{boardId}/cards/{cardId}/move")
-     public ResponseEntity<Card> moveCard(@PathVariable Long boardId,
+     public ResponseEntity<Card> moveCard(Authentication authentication,
+                                          @PathVariable Long boardId,
                                           @PathVariable Long cardId,
                                           @RequestBody MoveCardRequest req) {
+        User user = requireUser(authentication);
 
-        Card successCard = boardService.moveCard(boardId, cardId, req.columnId());
+        Card successCard = boardService.moveCard(user.getId(), boardId, cardId, req.columnId());
 
         return new ResponseEntity<>(successCard, HttpStatus.OK);
     }
@@ -145,10 +156,21 @@ public class BoardController {
      * @apiError (400 Bad Request) Card doesn't exist
      */
     @DeleteMapping("/{boardId}/cards/{cardId}/delete")
-    public ResponseEntity<Void> deleteCard(@PathVariable Long boardId, @PathVariable Long cardId) {
-        boardService.deleteCard(boardId, cardId);
+    public ResponseEntity<Void> deleteCard(Authentication authentication,
+                                           @PathVariable Long boardId,
+                                           @PathVariable Long cardId) {
+        User user = requireUser(authentication);
+        boardService.deleteCard(user.getId(), boardId, cardId);
 
         return ResponseEntity.noContent().build();
+    }
+
+    private User requireUser(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof User user)) {
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+
+        return user;
     }
 
     public record CreateBoardRequest(String name) {}

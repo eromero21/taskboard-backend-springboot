@@ -3,7 +3,7 @@ package com.example.taskboard.controller;
 import com.example.taskboard.model.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,9 +22,11 @@ public class UserController {
      * @apiSuccess (200 OK) {UserInfoResponse} Returns basic user information
      */
     @GetMapping
-    public ResponseEntity<UserInfoResponse> userInfo(@AuthenticationPrincipal User user) {
-        System.out.println("Principal class = " + user.getClass());
-        System.out.println("Id = " + user.getId() + " email = " + user.getEmail());
+    public ResponseEntity<UserInfoResponse> userInfo(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof User user)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
         return new ResponseEntity<>(new UserInfoResponse(user.getId(), user.getEmail()), HttpStatus.OK);
     }
 

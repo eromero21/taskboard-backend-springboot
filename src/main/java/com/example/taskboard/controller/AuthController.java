@@ -7,6 +7,7 @@ import com.example.taskboard.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,10 +34,11 @@ public class AuthController {
      * @apiSuccess (201 CREATED) {HttpStatus} Successful registry, only status code return
      */
     @PostMapping("/register")
-    public ResponseEntity<Void> registerUser(@Valid @RequestBody UserRequest req) {
-        userService.registerUser(req.email(), req.password());
+    public ResponseEntity<RegisterResponse> registerUser(@Valid @RequestBody UserRequest req) {
+        User user = userService.registerUser(req.email(), req.password());
 
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new RegisterResponse(user.getId(), user.getEmail()));
     }
 
     /**
@@ -47,17 +49,18 @@ public class AuthController {
      * @apiSuccess (200 OK) {HttpStatus} Successful login
      */
     @PostMapping("/login")
-    public ResponseEntity<String> loginValidation(@Valid @RequestBody UserRequest req) {
-        User user = authService.authentication(req.email(), req.password());
+    public ResponseEntity<LoginResponse> loginValidation(@Valid @RequestBody UserRequest req) {
+        User user = authService.authenticate(req.email(), req.password());
         String token = jwtService.generateToken(user);
 
-        return ResponseEntity.ok(token);
+        return ResponseEntity.ok(new LoginResponse(user.getId(), user.getEmail(), token));
     }
 
     public record UserRequest(
             @NotBlank @Email String email,
-            @NotBlank String password) {};
+            @NotBlank @Size(min = 8, max = 72) String password) {}
 
-    public record LoginResponse(String token) {};
+    public record RegisterResponse(Long id, String email) {}
 
+    public record LoginResponse(Long id, String email, String token) {}
 }

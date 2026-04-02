@@ -1,0 +1,7 @@
+package com.example.taskboard.exception;
+
+public class DuplicateEmailException extends RuntimeException {
+    public DuplicateEmailException(String message) {
+        super(message);
+    }
+}

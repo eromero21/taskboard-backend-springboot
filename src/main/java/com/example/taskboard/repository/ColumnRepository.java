@@ -11,4 +11,6 @@ public interface ColumnRepository extends JpaRepository<ColumnEntity, Long> {
     List<ColumnEntity> findByBoardId(Long boardId);
 
     Optional<ColumnEntity> findByBoardIdAndType(Long boardId, ColumnType type);
+
+    Optional<ColumnEntity> findByBoardIdAndBoardOwnerIdAndType(Long boardId, Long ownerId, ColumnType type);
 }

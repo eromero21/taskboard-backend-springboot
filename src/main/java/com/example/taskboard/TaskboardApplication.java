@@ -1,7 +1,7 @@
 package com.example.taskboard;
 
-import com.example.taskboard.model.Board;
 import com.example.taskboard.repository.BoardRepository;
+import com.example.taskboard.repository.UserRepository;
 import com.example.taskboard.service.BoardService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -18,10 +18,13 @@ public class TaskboardApplication {
 
 	@Bean
 	@ConditionalOnProperty(name="app.seed-default-board", havingValue="true", matchIfMissing=true)
-	CommandLineRunner seedDefaultBoard(BoardService boardService, BoardRepository boardRepository) {
+	CommandLineRunner seedDefaultBoard(BoardService boardService,
+									  BoardRepository boardRepository,
+									  UserRepository userRepository) {
 		return args -> {
 			if (boardRepository.count() == 0) {
-				boardService.createBoard("My first board!");
+				userRepository.findFirstByOrderByIdAsc()
+						.ifPresent(user -> boardService.createBoard(user.getId(), "My first board!"));
 			}
 		};
 	}

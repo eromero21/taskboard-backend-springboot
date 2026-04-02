@@ -4,15 +4,16 @@ import com.example.taskboard.model.Board;
 import com.example.taskboard.model.ColumnEntity;
 import com.example.taskboard.model.Card;
 import com.example.taskboard.model.ColumnType;
+import com.example.taskboard.model.User;
 import com.example.taskboard.repository.BoardRepository;
 import com.example.taskboard.repository.CardRepository;
 import com.example.taskboard.repository.ColumnRepository;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.*;
+import org.springframework.http.HttpStatus;
+
+import java.util.List;
 
 @Service
 public class BoardService {
@@ -20,16 +21,27 @@ public class BoardService {
     private final CardRepository cardRepository;
     private final BoardRepository boardRepository;
     private final ColumnRepository columnRepository;
+    private final UserService userService;
 
-    public BoardService(CardRepository cardRepository, BoardRepository boardRepository, ColumnRepository columnRepository) {
+    public BoardService(CardRepository cardRepository,
+                        BoardRepository boardRepository,
+                        ColumnRepository columnRepository,
+                        UserService userService) {
         this.cardRepository = cardRepository;
         this.boardRepository = boardRepository;
         this.columnRepository = columnRepository;
+        this.userService = userService;
     }
 
-    public Board createBoard(String name) {
+    public Board createBoard(Long ownerId, String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Board name cannot be empty");
+        }
+
+        User owner = userService.getUserById(ownerId);
         Board board = new Board();
         board.setName(name);
+        board.setOwner(owner);
 
         for (String columnName : columnNames) {
             ColumnType type = ColumnType.valueOf(columnName.toUpperCase().replace(" ", "_"));
@@ -40,28 +52,28 @@ public class BoardService {
         return boardRepository.save(board);
     }
 
-    public Board getBoard(Long boardId) {
-        return boardRepository.findByIdWithColumnsAndCards(boardId).orElseThrow(() ->
+    public Board getBoard(Long ownerId, Long boardId) {
+        return boardRepository.findByIdWithColumnsAndCards(boardId, ownerId).orElseThrow(() ->
                 new IllegalArgumentException("Board not found"));
     }
 
-    public List<Board> getAllBoards() {
-        return boardRepository.findAll();
+    public List<Board> getAllBoards(Long ownerId) {
+        return boardRepository.findAllByOwnerId(ownerId);
     }
 
-    public List<Card> getCards() {
-        return cardRepository.findAll();
+    public List<Card> getCards(Long ownerId) {
+        return cardRepository.findByBoardOwnerId(ownerId);
     }
 
-    public Card createCard(Long boardId, String title, String description) {
+    public Card createCard(Long ownerId, Long boardId, String title, String description) {
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException("Title cannot be empty");
         }
 
-        Board board = boardRepository.findById(boardId).orElseThrow(() ->
+        Board board = boardRepository.findByIdAndOwnerId(boardId, ownerId).orElseThrow(() ->
                 new IllegalArgumentException("Board not found"));
 
-        ColumnEntity backlog = columnRepository.findByBoardIdAndType(boardId, ColumnType.BACKLOG).orElseThrow(
+        ColumnEntity backlog = columnRepository.findByBoardIdAndBoardOwnerIdAndType(boardId, ownerId, ColumnType.BACKLOG).orElseThrow(
                 () -> new IllegalArgumentException("Backlog column not found"));
 
         Card newCard = new Card(board, backlog, title, description);
@@ -71,19 +83,15 @@ public class BoardService {
         return cardRepository.save(newCard);
     }
 
-    public Card moveCard(Long boardId, Long cardId, ColumnType columnId) {
+    public Card moveCard(Long ownerId, Long boardId, Long cardId, ColumnType columnId) {
         if (columnId == null) {
             throw new IllegalArgumentException("Invalid column type.");
         }
 
-        Card theCard = cardRepository.findById(cardId).orElseThrow(() ->
+        Card theCard = cardRepository.findByIdAndBoardIdAndBoardOwnerId(cardId, boardId, ownerId).orElseThrow(() ->
                 new IllegalArgumentException("Card ID doesn't exist.."));
 
-        if (!theCard.getBoard().getId().equals(boardId)) {
-            throw new IllegalArgumentException("Card does not belong to this board.");
-        }
-
-        ColumnEntity targetColumn = columnRepository.findByBoardIdAndType(boardId, columnId).orElseThrow(
+        ColumnEntity targetColumn = columnRepository.findByBoardIdAndBoardOwnerIdAndType(boardId, ownerId, columnId).orElseThrow(
                 () -> new IllegalArgumentException("Column not belong to this board.")
         );
 
@@ -91,24 +99,16 @@ public class BoardService {
         return cardRepository.save(theCard);
     }
 
-    public void deleteCard(Long boardId, Long cardId) {
-        Card theCard = cardRepository.findById(cardId).orElseThrow(() ->
+    public void deleteCard(Long ownerId, Long boardId, Long cardId) {
+        Card theCard = cardRepository.findByIdAndBoardIdAndBoardOwnerId(cardId, boardId, ownerId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        if (!theCard.getBoard().getId().equals(boardId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
 
         cardRepository.delete(theCard);
     }
 
-    public Card editCard(Long boardId, Long cardId, Card newCard) {
-        Card theCard = cardRepository.findById(cardId).orElseThrow(() ->
+    public Card editCard(Long ownerId, Long boardId, Long cardId, Card newCard) {
+        Card theCard = cardRepository.findByIdAndBoardIdAndBoardOwnerId(cardId, boardId, ownerId).orElseThrow(() ->
                 new IllegalArgumentException("Card ID doesn't exist.."));
-
-        if (!theCard.getBoard().getId().equals(boardId)) {
-            throw new IllegalArgumentException("Card does not belong to this board.");
-        }
 
         theCard.setTitle(newCard.getTitle());
         theCard.setDescription(newCard.getDescription());
@@ -116,7 +116,7 @@ public class BoardService {
         return cardRepository.save(theCard);
     }
 
-    public boolean hasCard(Long cardId) {
-        return cardRepository.existsById(cardId);
+    public boolean hasCard(Long ownerId, Long boardId, Long cardId) {
+        return cardRepository.findByIdAndBoardIdAndBoardOwnerId(cardId, boardId, ownerId).isPresent();
     }
 }

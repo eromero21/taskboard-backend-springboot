@@ -4,6 +4,7 @@ import com.example.taskboard.model.Board;
 import com.example.taskboard.model.Card;
 import com.example.taskboard.model.ColumnEntity;
 import com.example.taskboard.model.ColumnType;
+import com.example.taskboard.model.User;
 import com.example.taskboard.repository.BoardRepository;
 import com.example.taskboard.repository.CardRepository;
 import com.example.taskboard.repository.ColumnRepository;
@@ -32,30 +33,36 @@ public class BoardServiceCreateCardTest {
     @Mock
     private BoardRepository boardRepository;
 
+    @Mock
+    private UserService userService;
+
     @InjectMocks
     private BoardService boardService;
 
     @Test
     void createCard_success() {
+        Long ownerId = 99L;
         Long boardId = 1L;
         String title = "My test card";
         String description = "This card is for testing purposes.";
 
         Board board = new Board();
         board.setId(boardId);
+        board.setOwner(new User("owner@example.test", "hashedPassword"));
 
         ColumnEntity backlog = new ColumnEntity();
         backlog.setType(ColumnType.BACKLOG);
         backlog.setCards(new ArrayList<>());
+        backlog.setBoard(board);
 
-        when(boardRepository.findById(boardId)).thenReturn(Optional.of(board));
+        when(boardRepository.findByIdAndOwnerId(boardId, ownerId)).thenReturn(Optional.of(board));
 
-        when(columnRepository.findByBoardIdAndType(boardId, ColumnType.BACKLOG)).thenReturn(Optional.of(backlog));
+        when(columnRepository.findByBoardIdAndBoardOwnerIdAndType(boardId, ownerId, ColumnType.BACKLOG))
+                .thenReturn(Optional.of(backlog));
 
         when(cardRepository.save(any(Card.class))).thenAnswer(i -> i.getArgument(0));
 
-
-        Card resultCard = boardService.createCard(boardId, title, description);
+        Card resultCard = boardService.createCard(ownerId, boardId, title, description);
 
         assertNotNull(resultCard);
         assertEquals(title, resultCard.getTitle());
@@ -69,10 +76,11 @@ public class BoardServiceCreateCardTest {
 
     @Test
     void createCard_fail_noTitle() {
+        Long ownerId = 99L;
         Long boardId = 1L;
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            boardService.createCard(boardId, null, "description");
+            boardService.createCard(ownerId, boardId, null, "description");
         });
 
         assertEquals("Title cannot be empty", exception.getMessage());
@@ -81,12 +89,13 @@ public class BoardServiceCreateCardTest {
 
     @Test
     void createCard_fail_invalidBoardId() {
+        Long ownerId = 99L;
         Long boardId = 1L;
 
-        when(boardRepository.findById(boardId)).thenReturn(Optional.empty());
+        when(boardRepository.findByIdAndOwnerId(boardId, ownerId)).thenReturn(Optional.empty());
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            boardService.createCard(boardId, "title", "description");
+            boardService.createCard(ownerId, boardId, "title", "description");
         });
 
         assertEquals("Board not found", exception.getMessage());
@@ -95,17 +104,20 @@ public class BoardServiceCreateCardTest {
 
     @Test
     void createCard_fail_columnNotFound() {
+        Long ownerId = 99L;
         Long boardId = 1L;
 
         Board board = new Board();
         board.setId(boardId);
+        board.setOwner(new User("owner@example.test", "hashedPassword"));
 
-        when(boardRepository.findById(boardId)).thenReturn(Optional.of(board));
+        when(boardRepository.findByIdAndOwnerId(boardId, ownerId)).thenReturn(Optional.of(board));
 
-        when(columnRepository.findByBoardIdAndType(boardId, ColumnType.BACKLOG)).thenReturn(Optional.empty());
+        when(columnRepository.findByBoardIdAndBoardOwnerIdAndType(boardId, ownerId, ColumnType.BACKLOG))
+                .thenReturn(Optional.empty());
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            boardService.createCard(boardId, "title", "description");
+            boardService.createCard(ownerId, boardId, "title", "description");
         });
 
         assertEquals("Backlog column not found", exception.getMessage());

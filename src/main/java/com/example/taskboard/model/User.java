@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 @Entity
 @Table(name="users")
 public class User {
@@ -18,6 +21,10 @@ public class User {
     @JsonIgnore
     @Column(nullable = false)
     private String passwordHash;
+
+    @OneToMany(mappedBy = "owner")
+    @JsonIgnore
+    private Set<Board> boards = new LinkedHashSet<>();
 
     public User() {}
 
@@ -42,5 +49,13 @@ public class User {
 
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public Set<Board> getBoards() {
+        return boards;
+    }
+
+    public void setBoards(Set<Board> boards) {
+        this.boards = boards;
     }
 }
