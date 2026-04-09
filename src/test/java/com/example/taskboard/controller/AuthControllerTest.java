@@ -2,8 +2,6 @@ package com.example.taskboard.controller;
 
 import com.example.taskboard.model.User;
 import com.example.taskboard.service.AuthService;
-import com.example.taskboard.service.JwtService;
-import com.example.taskboard.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,12 +21,6 @@ public class AuthControllerTest {
     @Mock
     private AuthService authService;
 
-    @Mock
-    private UserService userService;
-
-    @Mock
-    private JwtService jwtService;
-
     @InjectMocks
     private AuthController authController;
 
@@ -40,14 +32,16 @@ public class AuthControllerTest {
         AuthController.UserRequest request =
                 new AuthController.UserRequest("user@example.test", "password123");
 
-        when(userService.registerUser(request.email(), request.password())).thenReturn(savedUser);
+        when(authService.register(request.email(), request.password()))
+                .thenReturn(new AuthService.AuthResult(savedUser, "jwt-token"));
 
-        ResponseEntity<AuthController.RegisterResponse> response = authController.registerUser(request);
+        ResponseEntity<AuthController.AuthResponse> response = authController.registerUser(request);
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertEquals(7L, response.getBody().id());
         assertEquals("user@example.test", response.getBody().email());
-        verify(userService).registerUser(request.email(), request.password());
+        assertEquals("jwt-token", response.getBody().token());
+        verify(authService).register(request.email(), request.password());
     }
 
     @Test
@@ -59,15 +53,15 @@ public class AuthControllerTest {
                 new AuthController.UserRequest("user@example.test", "password123");
 
         when(authService.authenticate(request.email(), request.password())).thenReturn(user);
-        when(jwtService.generateToken(user)).thenReturn("jwt-token");
+        when(authService.issueToken(user)).thenReturn("jwt-token");
 
-        ResponseEntity<AuthController.LoginResponse> response = authController.loginValidation(request);
+        ResponseEntity<AuthController.AuthResponse> response = authController.loginValidation(request);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(11L, response.getBody().id());
         assertEquals("user@example.test", response.getBody().email());
         assertEquals("jwt-token", response.getBody().token());
         verify(authService).authenticate(request.email(), request.password());
-        verify(jwtService).generateToken(user);
+        verify(authService).issueToken(user);
     }
 }

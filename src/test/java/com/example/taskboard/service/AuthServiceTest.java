@@ -23,8 +23,28 @@ public class AuthServiceTest {
     @Mock
     UserService userService;
 
+    @Mock
+    JwtService jwtService;
+
     @InjectMocks
     AuthService authService;
+
+    @Test
+    void register_success() {
+        String email = "user123@example.test";
+        String rawPassword = "rawPass123";
+        User testUser = new User(email, "hashedPass");
+
+        when(userService.registerUser(email, rawPassword)).thenReturn(testUser);
+        when(jwtService.generateToken(testUser)).thenReturn("jwt-token");
+
+        AuthService.AuthResult result = authService.register(email, rawPassword);
+
+        assertEquals(testUser, result.user());
+        assertEquals("jwt-token", result.token());
+        verify(userService).registerUser(email, rawPassword);
+        verify(jwtService).generateToken(testUser);
+    }
 
     @Test
     void authentication_success() {

@@ -2,8 +2,6 @@ package com.example.taskboard.controller;
 
 import com.example.taskboard.model.User;
 import com.example.taskboard.service.AuthService;
-import com.example.taskboard.service.JwtService;
-import com.example.taskboard.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -17,13 +15,9 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin("http://localhost:5173")
 public class AuthController {
     private final AuthService authService;
-    private final UserService userService;
-    private final JwtService jwtService;
 
-    public AuthController(AuthService authService, UserService userService, JwtService jwtService) {
+    public AuthController(AuthService authService) {
         this.authService = authService;
-        this.userService = userService;
-        this.jwtService = jwtService;
     }
 
     /**
@@ -31,14 +25,15 @@ public class AuthController {
      * @apiName RegisterUser
      * @apiGroup Authentication
      *
-     * @apiSuccess (201 CREATED) {HttpStatus} Successful registry, only status code return
+     * @apiSuccess (201 CREATED) {AuthResponse} Successful registration with JWT token
      */
     @PostMapping("/register")
-    public ResponseEntity<RegisterResponse> registerUser(@Valid @RequestBody UserRequest req) {
-        User user = userService.registerUser(req.email(), req.password());
+    public ResponseEntity<AuthResponse> registerUser(@Valid @RequestBody UserRequest req) {
+        AuthService.AuthResult authResult = authService.register(req.email(), req.password());
+        User user = authResult.user();
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new RegisterResponse(user.getId(), user.getEmail()));
+                .body(new AuthResponse(user.getId(), user.getEmail(), authResult.token()));
     }
 
     /**
@@ -49,18 +44,16 @@ public class AuthController {
      * @apiSuccess (200 OK) {HttpStatus} Successful login
      */
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> loginValidation(@Valid @RequestBody UserRequest req) {
+    public ResponseEntity<AuthResponse> loginValidation(@Valid @RequestBody UserRequest req) {
         User user = authService.authenticate(req.email(), req.password());
-        String token = jwtService.generateToken(user);
+        String token = authService.issueToken(user);
 
-        return ResponseEntity.ok(new LoginResponse(user.getId(), user.getEmail(), token));
+        return ResponseEntity.ok(new AuthResponse(user.getId(), user.getEmail(), token));
     }
 
     public record UserRequest(
             @NotBlank @Email String email,
             @NotBlank @Size(min = 8, max = 72) String password) {}
 
-    public record RegisterResponse(Long id, String email) {}
-
-    public record LoginResponse(Long id, String email, String token) {}
+    public record AuthResponse(Long id, String email, String token) {}
 }
