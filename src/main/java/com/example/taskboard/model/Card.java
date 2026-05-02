@@ -3,6 +3,8 @@ package com.example.taskboard.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.time.Instant;
+
 @Entity
 @Table(name = "cards")
 public class Card {
@@ -25,14 +27,25 @@ public class Card {
     @JsonIgnore
     private ColumnEntity column;
 
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
+
     public Card (Board board, ColumnEntity column, String title, String description) {
         this.board = board;
         this.column = column;
         this.title = title;
         this.description = description;
+        this.createdAt = Instant.now();
     }
 
     public Card() {};
+
+    @PrePersist
+    public void ensureCreatedAt() {
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
+    }
 
     public ColumnType getColumnId() {
         if (column != null) {
@@ -75,5 +88,13 @@ public class Card {
 
     public void setBoard(Board board) {
         this.board = board;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
     }
 }

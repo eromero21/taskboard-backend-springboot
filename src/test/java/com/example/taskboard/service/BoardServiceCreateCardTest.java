@@ -69,6 +69,7 @@ public class BoardServiceCreateCardTest {
         assertEquals(description, resultCard.getDescription());
         assertEquals(board, resultCard.getBoard());
         assertEquals(backlog, resultCard.getColumn());
+        assertNotNull(resultCard.getCreatedAt());
 
         verify(cardRepository).save(resultCard);
         assertTrue(backlog.getCards().contains(resultCard));
