@@ -77,6 +77,22 @@ public class BoardController {
     }
 
     /**
+     * @api {delete} /boards/{boardId} Delete board by id
+     * @apiName DeleteBoard
+     * @apiGroup Boards
+     *
+     * @apiSuccess (204 No Content) Board deleted
+     * @apiError (404 Not Found) Board doesn't exist
+     */
+    @DeleteMapping("/{boardId}")
+    public ResponseEntity<Void> deleteBoard(Authentication authentication, @PathVariable Long boardId) {
+        User user = requireUser(authentication);
+        boardService.deleteBoard(user.getId(), boardId);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
      * @api {post} /boards/{boardId}/cards Create new card
      * @apiName CreateCard
      * @apiGroup Cards

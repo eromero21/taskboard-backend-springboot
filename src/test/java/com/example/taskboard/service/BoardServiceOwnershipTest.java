@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -82,6 +83,30 @@ public class BoardServiceOwnershipTest {
                 boardService.getBoard(5L, 20L));
 
         assertEquals("Board not found", exception.getMessage());
+    }
+
+    @Test
+    void deleteBoard_usesOwnerScopedLookup() {
+        Board board = new Board("Project Board");
+        ReflectionTestUtils.setField(board, "id", 20L);
+
+        when(boardRepository.findByIdAndOwnerId(20L, 5L)).thenReturn(Optional.of(board));
+        doNothing().when(boardRepository).delete(board);
+
+        boardService.deleteBoard(5L, 20L);
+
+        verify(boardRepository).findByIdAndOwnerId(20L, 5L);
+        verify(boardRepository).delete(board);
+    }
+
+    @Test
+    void deleteBoard_rejectsBoardOutsideOwnerScope() {
+        when(boardRepository.findByIdAndOwnerId(20L, 5L)).thenReturn(Optional.empty());
+
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () ->
+                boardService.deleteBoard(5L, 20L));
+
+        verify(boardRepository, never()).delete(any(Board.class));
     }
 
     @Test

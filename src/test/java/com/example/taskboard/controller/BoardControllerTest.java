@@ -22,6 +22,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -87,6 +88,22 @@ public class BoardControllerTest {
         assertEquals(99L, response.getBody().getId());
         verify(boardService).createCard(17L, 42L, "Task", "Do the work");
         RequestContextHolder.resetRequestAttributes();
+    }
+
+    @Test
+    void deleteBoard_usesAuthenticatedUserId() {
+        User user = new User("user@example.test", "hashedPassword");
+        ReflectionTestUtils.setField(user, "id", 17L);
+
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(user, null, List.of());
+
+        doNothing().when(boardService).deleteBoard(17L, 42L);
+
+        ResponseEntity<Void> response = boardController.deleteBoard(authentication, 42L);
+
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        verify(boardService).deleteBoard(17L, 42L);
     }
 
     @Test

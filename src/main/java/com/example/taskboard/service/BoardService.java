@@ -61,6 +61,13 @@ public class BoardService {
         return boardRepository.findAllByOwnerId(ownerId);
     }
 
+    public void deleteBoard(Long ownerId, Long boardId) {
+        Board board = boardRepository.findByIdAndOwnerId(boardId, ownerId).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        boardRepository.delete(board);
+    }
+
     public List<Card> getCards(Long ownerId) {
         return cardRepository.findByBoardOwnerId(ownerId);
     }
